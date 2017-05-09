@@ -37,8 +37,9 @@ class GeneticAlgorithm(object):
     def apply_roulette_selection(self):
         """Apply fi/favg to get roulette"""
         roulette = []
+        generation_size = len(self.permutations)
         for perm in self.permutations:
-            avg_fitness = self.total_fitness() / self.population_size
+            avg_fitness = self.total_fitness() / generation_size
             roulette += [perm] * int((perm.fitness / avg_fitness)) if avg_fitness > 0 else []
         self.permutations = roulette
 
@@ -94,8 +95,6 @@ class GeneticAlgorithm(object):
                     queen = permutation.arrangement[down]
                     if queen == left or queen == right:
                         permutation.fitness += 1
-
-            permutation.fitness = self.goal_fitness - permutation.fitness
 
             if permutation.fitness == 0:
                 raise GoalFound("Goal with fitness", permutation.fitness, permutation.arrangement)
