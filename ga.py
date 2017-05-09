@@ -2,9 +2,9 @@ import itertools
 
 
 class Permutation(object):
-    def __init__(self, N: int, arrangement: list):
+    def __init__(self, N: int, arrangement: list, fitness: int=0):
         self.population_size = N
-        self.score = 0
+        self.fitness = fitness or 0
         self.arrangement = arrangement
 
 
@@ -12,11 +12,23 @@ class GeneticAlgorithm(object):
     """index: row, value: row"""
     def __init__(self, N: int):
         self.population_size = N
-        self.permutations = list(itertools.permutations(range(self.population_size)))
         self.board = list(range(self.population_size))
+        total_fitness = 0
+
+        self.permutations = []
+        for permutation in itertools.permutations(range(self.population_size)):
+            fitness = self.fitness(permutation)
+            total_fitness += fitness
+            self.permutations.append(Permutation(self.population_size, permutation, fitness))
+
+        self.avg_fitness = float(total_fitness) / self.population_size
 
     def apply_roulette_selection(self):
-        pass
+        """Apply fi/favg to roulette"""
+        roulette = []
+        for permutation in self.permutations:
+            roulette += [permutation] * (permutation.fitness / self.avg_fitness)
+        return roulette
 
     def apply_crossover(self):
         pass
@@ -30,11 +42,11 @@ class GeneticAlgorithm(object):
             queen_col = permutation.arrangement[row]
             print('row', row, 'col', queen_col)
             # count queens in the same col
-            permutation.score += permutation.arrangement.count(queen_col) - 1
+            permutation.fitness += permutation.arrangement.count(queen_col) - 1
             # count queens in the same row
-            permutation.score += permutation.arrangement.count(row) - 1
+            permutation.fitness += permutation.arrangement.count(row) - 1
 
-            print("perm before diagnols", permutation.score)
+            print("perm before diagnols", permutation.fitness)
             # check the four diagnols
             for i in range(0, self.population_size):
                 up = row - i
@@ -49,12 +61,12 @@ class GeneticAlgorithm(object):
                 if up >= 0:
                     queen = permutation.arrangement[up]
                     if queen == left or queen == right:
-                        permutation.score += 1
+                        permutation.fitness += 1
                 if down < self.population_size:
                     queen = permutation.arrangement[down]
                     if queen == left or queen == right:
-                        permutation.score += 1
-            print("perm score", permutation.score)
+                        permutation.fitness += 1
+            print("perm fitness", permutation.fitness)
 
 if __name__ == '__main__':
     n = 4
@@ -62,4 +74,4 @@ if __name__ == '__main__':
     perm = Permutation(n, [3, 1, 0, 2])
     print(perm.arrangement)
     ga.fitness(perm)
-    print("total", perm.score)
+    print("total", perm.fitness)
