@@ -22,7 +22,9 @@ class GeneticAlgorithm(object):
         self.goal_fitness = (self.population_size - 1) * self.population_size
         self.board = list(range(self.population_size))
         self.permutations = []
-        for arrangement in itertools.permutations(range(self.population_size)):
+        arrangement = list(range(self.population_size))
+        for _ in range(self.population_size):
+            random.shuffle(arrangement)
             print("Creating permutation", arrangement)
             permutation = Permutation(self.population_size, arrangement)
             self.fitness(permutation)
@@ -36,23 +38,25 @@ class GeneticAlgorithm(object):
         """Apply fi/favg to get roulette"""
         roulette = []
         for perm in self.permutations:
-            roulette += [perm] * (perm.fitness / (self.total_fitness() / self.population_size))
+            avg_fitness = self.total_fitness() / self.population_size
+            roulette += [perm] * int((perm.fitness / avg_fitness)) if avg_fitness > 0 else []
         self.permutations = roulette
 
     def apply_crossover(self):
         """Take 2 random mates, select random crossover point. Produce two offsprings"""
         crossed_over = []
-        for _ in range(self.population_size / 2):
+        generation_size = len(self.permutations)
+        for _ in range(generation_size // 2):
             crossover_point = random.randint(0, self.population_size - 1)
-            parent_one = self.permutations[random.randint(0, self.population_size - 1)]
-            parent_two = self.permutations[random.randint(0, self.population_size - 1)]
+            parent_one = self.permutations[random.randint(0, generation_size - 1)]
+            parent_two = self.permutations[random.randint(0, generation_size - 1)]
 
-            crossed_over.append(Permutation(self.population_size,
+            crossed_over.append(Permutation(generation_size,
                                             parent_one.arrangement[:crossover_point] +
-                                            parent_two[crossover_point:]))
-            crossed_over.append(Permutation(self.population_size,
+                                            parent_two.arrangement[crossover_point:]))
+            crossed_over.append(Permutation(generation_size,
                                             parent_two.arrangement[:crossover_point] +
-                                            parent_one[crossover_point:]))
+                                            parent_one.arrangement[crossover_point:]))
         self.permutations = crossed_over
 
     def apply_mutation(self, rate: float):
@@ -93,7 +97,7 @@ class GeneticAlgorithm(object):
 
             permutation.fitness = self.goal_fitness - permutation.fitness
 
-            if permutation.fitness == self.goal_fitness:
+            if permutation.fitness == 0:
                 raise GoalFound("Goal with fitness", permutation.fitness, permutation.arrangement)
 
             return permutation.fitness
@@ -101,16 +105,17 @@ class GeneticAlgorithm(object):
     def generate(self, count: int, mutation_rate: float):
         """Apply roulette, crossover, and mutations count times with rate"""
         for _ in range(count):
-            print("Apply roulette", len(self.permutations))
+            self.total_fitness()
             self.apply_roulette_selection()
-            print("Apply crossover", len(self.permutations))
+            print("Applied roulette", len(self.permutations))
             self.apply_crossover()
-            print("Apply mutation", len(self.permutations))
+            print("Applied crossover", len(self.permutations))
             self.apply_mutation(mutation_rate)
+            print("Applied mutation", len(self.permutations))
 
 
 if __name__ == '__main__':
-    ga = GeneticAlgorithm(20)
+    ga = GeneticAlgorithm(4)
     print("before generate fitness: ", ga.total_fitness())
-    ga.generate(1, 0.001)
-    print("before generate fitness: ", ga.total_fitness())
+    ga.generate(10, 0.001)
+    print("after generate fitness: ", ga.total_fitness())
