@@ -22,8 +22,16 @@ class GeneticAlgorithm(object):
         self.goal_fitness = (self.population_size - 1) * self.population_size
         self.board = list(range(self.population_size))
         self.permutations = []
-        arrangement = list(range(self.population_size))
-        for _ in range(self.population_size):
+
+    def generate_permutations(self, number_of_permutations=None):
+        """Randomly generate permutations"""
+        number_of_permutations = (number_of_permutations or
+                                  random.randint(1, int(self.population_size / 10) or 2))
+        print("================================================")
+        print("================== Generating ==================", number_of_permutations)
+        print("================================================")
+        for _ in range(number_of_permutations):
+            arrangement = list(range(self.population_size))
             random.shuffle(arrangement)
             print("Creating permutation", arrangement)
             permutation = Permutation(self.population_size, arrangement)
@@ -52,12 +60,14 @@ class GeneticAlgorithm(object):
             parent_one = self.permutations[random.randint(0, generation_size - 1)]
             parent_two = self.permutations[random.randint(0, generation_size - 1)]
 
-            crossed_over.append(Permutation(generation_size,
-                                            parent_one.arrangement[:crossover_point] +
-                                            parent_two.arrangement[crossover_point:]))
-            crossed_over.append(Permutation(generation_size,
-                                            parent_two.arrangement[:crossover_point] +
-                                            parent_one.arrangement[crossover_point:]))
+            child_one = Permutation(generation_size,
+                                    parent_one.arrangement[:crossover_point] +
+                                    parent_two.arrangement[crossover_point:])
+            self.fitness(child_one)
+            child_two = Permutation(generation_size,
+                                    parent_two.arrangement[:crossover_point] +
+                                    parent_one.arrangement[crossover_point:])
+            self.fitness(child_two)
         self.permutations = crossed_over
 
     def apply_mutation(self, rate: float):
@@ -66,6 +76,8 @@ class GeneticAlgorithm(object):
             for index in self.board:
                 if random.random() > rate:
                     permutation.arrangement[index] = random.randint(0, self.population_size - 1)
+                    # recalculate fitness
+                    self.fitness(permutation)
 
     def fitness(self, permutation: Permutation):
         """permutation is one Permutation with length = self.population_size"""
@@ -96,25 +108,32 @@ class GeneticAlgorithm(object):
                     if queen == left or queen == right:
                         permutation.fitness += 1
 
-            if permutation.fitness == 0:
-                raise GoalFound("Goal with fitness", permutation.fitness, permutation.arrangement)
+        if permutation.fitness == 0:
+            raise GoalFound("Goal with fitness", permutation.fitness, permutation.arrangement)
 
-            return permutation.fitness
+        return permutation.fitness
 
     def generate(self, count: int, mutation_rate: float):
         """Apply roulette, crossover, and mutations count times with rate"""
         for _ in range(count):
-            self.total_fitness()
+            if len(self.permutations) == 0:
+                self.generate_permutations()
             self.apply_roulette_selection()
             print("Applied roulette", len(self.permutations))
+            if len(self.permutations) == 0:
+                self.generate_permutations()
             self.apply_crossover()
             print("Applied crossover", len(self.permutations))
+            if len(self.permutations) == 0:
+                self.generate_permutations()
             self.apply_mutation(mutation_rate)
             print("Applied mutation", len(self.permutations))
 
+        min_permutation = min([perm for perm in self.permutations], key=lambda p: p.fitness)
+        print("After", count, " generations, the lowest fitness is",
+              min_permutation.fitness, min_permutation.arrangement)
+
 
 if __name__ == '__main__':
-    ga = GeneticAlgorithm(4)
-    print("before generate fitness: ", ga.total_fitness())
+    ga = GeneticAlgorithm(50)
     ga.generate(10, 0.001)
-    print("after generate fitness: ", ga.total_fitness())
