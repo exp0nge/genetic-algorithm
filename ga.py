@@ -5,13 +5,53 @@ import random
 
 class Permutation(object):
     """Represents a list of integers"""
-    def __init__(self, N: int, arrangement: list, fitness: int=0):
+    def __init__(self, N: int, arrangement: list, fitness: int=None):
         self.population_size = N
-        self.fitness = fitness or 0
+        self.board = list(range(self.population_size))
         self.arrangement = arrangement
+        if fitness is None:
+            self.fitness = 0
+            self.get_fitness()
+        else:
+            self.fitness = fitness
+
+    def get_fitness(self):
+        """permutation is one Permutation with length = self.population_size"""
+        for row in self.board:
+            queen_col = self.arrangement[row]
+            # count queens in the same col
+            self.fitness += self.arrangement.count(queen_col) - 1
+            # count queens in the same row
+            self.fitness += self.arrangement.count(row) - 1
+
+            # check the four diagnols
+            for i in range(0, self.population_size):
+                _up = row - i
+                down = row + i
+                right = queen_col + i
+                left = queen_col - i
+
+                if (_up == row or down == row) and (right == queen_col or left == queen_col):
+                    # don't count the queen we are currently checking
+                    continue
+
+                if _up >= 0:
+                    queen = self.arrangement[_up]
+                    if queen == left or queen == right:
+                        self.fitness += 1
+                if down < self.population_size:
+                    queen = self.arrangement[down]
+                    if queen == left or queen == right:
+                        self.fitness += 1
+
+        if self.fitness == 0:
+            raise GoalFound("Goal with fitness", self.fitness, self.arrangement)
+
+        return self.fitness
 
 
 class GoalFound(Exception):
+    """Use to halt execution when a goal is found"""
     pass
 
 
@@ -28,14 +68,13 @@ class GeneticAlgorithm(object):
         number_of_permutations = (number_of_permutations or
                                   random.randint(1, int(self.population_size / 10) or 2))
         print("================================================")
-        print("================== Generating ==================", number_of_permutations)
+        print("Shuffling %i" % number_of_permutations)
         print("================================================")
         for _ in range(number_of_permutations):
             arrangement = list(range(self.population_size))
             random.shuffle(arrangement)
             print("Creating permutation", arrangement)
             permutation = Permutation(self.population_size, arrangement)
-            self.fitness(permutation)
             self.permutations.append(permutation)
 
     def total_fitness(self):
@@ -63,11 +102,11 @@ class GeneticAlgorithm(object):
             child_one = Permutation(generation_size,
                                     parent_one.arrangement[:crossover_point] +
                                     parent_two.arrangement[crossover_point:])
-            self.fitness(child_one)
             child_two = Permutation(generation_size,
                                     parent_two.arrangement[:crossover_point] +
                                     parent_one.arrangement[crossover_point:])
-            self.fitness(child_two)
+            crossed_over.append(child_one)
+            crossed_over.append(child_two)
         self.permutations = crossed_over
 
     def apply_mutation(self, rate: float):
@@ -77,45 +116,18 @@ class GeneticAlgorithm(object):
                 if random.random() > rate:
                     permutation.arrangement[index] = random.randint(0, self.population_size - 1)
                     # recalculate fitness
-                    self.fitness(permutation)
-
-    def fitness(self, permutation: Permutation):
-        """permutation is one Permutation with length = self.population_size"""
-        for row in self.board:
-            queen_col = permutation.arrangement[row]
-            # count queens in the same col
-            permutation.fitness += permutation.arrangement.count(queen_col) - 1
-            # count queens in the same row
-            permutation.fitness += permutation.arrangement.count(row) - 1
-
-            # check the four diagnols
-            for i in range(0, self.population_size):
-                _up = row - i
-                down = row + i
-                right = queen_col + i
-                left = queen_col - i
-
-                if (_up == row or down == row) and (right == queen_col or left == queen_col):
-                    # don't count the queen we are currently checking
-                    continue
-
-                if _up >= 0:
-                    queen = permutation.arrangement[_up]
-                    if queen == left or queen == right:
-                        permutation.fitness += 1
-                if down < self.population_size:
-                    queen = permutation.arrangement[down]
-                    if queen == left or queen == right:
-                        permutation.fitness += 1
-
-        if permutation.fitness == 0:
-            raise GoalFound("Goal with fitness", permutation.fitness, permutation.arrangement)
-
-        return permutation.fitness
+                    permutation.fitness = permutation.get_fitness()
 
     def generate(self, count: int, mutation_rate: float):
         """Apply roulette, crossover, and mutations count times with rate"""
-        for _ in range(count):
+        for gen in range(count):
+            print("================================================")
+            print("================================================")
+            print("================================================")
+            print("Generation %i" % gen)
+            print("================================================")
+            print("================================================")
+            print("================================================")
             if len(self.permutations) == 0:
                 self.generate_permutations()
             self.apply_roulette_selection()
@@ -136,4 +148,4 @@ class GeneticAlgorithm(object):
 
 if __name__ == '__main__':
     ga = GeneticAlgorithm(50)
-    ga.generate(10, 0.001)
+    ga.generate(500, 0.001)
