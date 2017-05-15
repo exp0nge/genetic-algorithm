@@ -45,6 +45,7 @@ class Permutation(object):
                         self.fitness += 1
 
         if self.fitness == 0:
+            GeneticAlgorithm.draw_board(self)
             raise GoalFound("Goal with fitness", self.fitness, self.arrangement)
 
         return self.fitness
@@ -128,8 +129,12 @@ class GeneticAlgorithm(object):
             print("================================================")
             print("================================================")
             print("================================================")
+
             if len(self.permutations) == 0:
                 self.generate_permutations()
+            for perm in self.permutations:
+                GeneticAlgorithm.draw_board(perm)
+
             self.apply_roulette_selection()
             print("Applied roulette", len(self.permutations))
             if len(self.permutations) == 0:
@@ -145,7 +150,19 @@ class GeneticAlgorithm(object):
         print("After", count, " generations, the lowest fitness is",
               min_permutation.fitness, min_permutation.arrangement)
 
+    @staticmethod
+    def draw_board(board: Permutation):
+        """Prints the board"""
+        for col in board.arrangement:
+            for i in range(0, board.population_size):
+                if i == col:
+                    print(' Q |', end='')
+                else:
+                    print('  |', end='')
+            print('')
+            print(' _ ' * int((board.population_size)))
+
 
 if __name__ == '__main__':
-    ga = GeneticAlgorithm(50)
+    ga = GeneticAlgorithm(4)
     ga.generate(500, 0.001)
