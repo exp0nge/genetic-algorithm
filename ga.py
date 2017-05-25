@@ -91,6 +91,13 @@ class GeneticAlgorithm(object):
             roulette += [perm] * int((perm.fitness / avg_fitness)) if avg_fitness > 0 else []
         self.permutations = roulette
 
+    def apply_tournament_selection(self):
+        """Apply tournament selection""""
+        group_size = random.randint(2, 5)
+        groups = [self.permutations[i:i+group_size] for i in range(0, len(self.permutations), group_size))
+        random.shuffle(groups)
+        self.permutations = groups[:len(groups)/2]        
+
     def apply_crossover(self):
         """Take 2 random mates, select random crossover point. Produce two offsprings"""
         crossed_over = []
