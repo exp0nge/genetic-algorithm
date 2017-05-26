@@ -1,5 +1,4 @@
 """Genetic algorithm using roulette selection, crossover, and mutation"""
-import itertools
 import random
 
 
@@ -58,8 +57,9 @@ class GoalFound(Exception):
 
 class GeneticAlgorithm(object):
     """index: row, value: row"""
-    def __init__(self, N: int):
+    def __init__(self, N: int, cold_stop=None):
         self.population_size = N
+        self.cold_stop = False if cold_stop is None else cold_stop
         self.goal_fitness = (self.population_size - 1) * self.population_size
         self.board = list(range(self.population_size))
         self.permutations = []
@@ -68,15 +68,19 @@ class GeneticAlgorithm(object):
         """Randomly generate permutations"""
         number_of_permutations = (number_of_permutations or
                                   random.randint(1, int(self.population_size / 10) or 2))
-        print("================================================")
-        print("Shuffling %i" % number_of_permutations)
-        print("================================================")
+        # print("================================================")
+        # print("Shuffling %i" % number_of_permutations)
+        # print("================================================")
         for _ in range(number_of_permutations):
             arrangement = list(range(self.population_size))
             random.shuffle(arrangement)
-            print("Creating permutation", arrangement)
+            # print("Creating permutation", arrangement)
             permutation = Permutation(self.population_size, arrangement)
             self.permutations.append(permutation)
+
+        if self.cold_stop:
+            if self.total_fitness() >= self.cold_stop:
+                self.generate_permutations(number_of_permutations)
 
     def total_fitness(self):
         """Returns the total fitness of all permutations"""
@@ -92,11 +96,12 @@ class GeneticAlgorithm(object):
         self.permutations = roulette
 
     def apply_tournament_selection(self):
-        """Apply tournament selection""""
+        """Apply tournament selection"""
         group_size = random.randint(2, 5)
-        groups = [self.permutations[i:i+group_size] for i in range(0, len(self.permutations), group_size))
+        groups = [self.permutations[i:i+group_size]
+                  for i in range(0, len(self.permutations), group_size)]
         random.shuffle(groups)
-        self.permutations = groups[:len(groups)/2]        
+        self.permutations = groups[:int(len(groups)/2)]
 
     def apply_crossover(self):
         """Take 2 random mates, select random crossover point. Produce two offsprings"""
@@ -107,10 +112,10 @@ class GeneticAlgorithm(object):
             parent_one = self.permutations[random.randint(0, generation_size - 1)]
             parent_two = self.permutations[random.randint(0, generation_size - 1)]
 
-            child_one = Permutation(generation_size,
+            child_one = Permutation(parent_one.population_size,
                                     parent_one.arrangement[:crossover_point] +
                                     parent_two.arrangement[crossover_point:])
-            child_two = Permutation(generation_size,
+            child_two = Permutation(parent_one.population_size,
                                     parent_two.arrangement[:crossover_point] +
                                     parent_one.arrangement[crossover_point:])
             crossed_over.append(child_one)
@@ -129,37 +134,44 @@ class GeneticAlgorithm(object):
     def generate(self, count: int, mutation_rate: float):
         """Apply roulette, crossover, and mutations count times with rate"""
         for gen in range(count):
-            print("================================================")
-            print("================================================")
-            print("================================================")
-            print("Generation %i" % gen)
-            print("================================================")
-            print("================================================")
-            print("================================================")
+            # print("================================================")
+            # print("================================================")
+            # print("================================================")
+            # print("Generation %i" % gen)
+            # print("================================================")
+            # print("================================================")
+            # print("================================================")
 
             if len(self.permutations) == 0:
                 self.generate_permutations()
-            for perm in self.permutations:
-                GeneticAlgorithm.draw_board(perm)
 
-            self.apply_roulette_selection()
-            print("Applied roulette", len(self.permutations))
+            # self.apply_roulette_selection()
+            self.apply_tournament_selection()
+            # print("Applied roulette", len(self.permutations))
             if len(self.permutations) == 0:
                 self.generate_permutations()
             self.apply_crossover()
-            print("Applied crossover", len(self.permutations))
+            # print("Applied crossover", len(self.permutations))
             if len(self.permutations) == 0:
                 self.generate_permutations()
             self.apply_mutation(mutation_rate)
-            print("Applied mutation", len(self.permutations))
+            # print("Applied mutation", len(self.permutations))
+
+            if gen % 10 == 0:
+                perm = max([perm for perm in self.permutations], key=lambda p: p.fitness)
+                print(">>> GEN", gen, perm.fitness)
+                print(perm.arrangement)
+                GeneticAlgorithm.draw_board(perm)
 
         min_permutation = min([perm for perm in self.permutations], key=lambda p: p.fitness)
+        GeneticAlgorithm.draw_board(min_permutation)
         print("After", count, " generations, the lowest fitness is",
               min_permutation.fitness, min_permutation.arrangement)
 
     @staticmethod
     def draw_board(board: Permutation):
         """Prints the board"""
+        # print("Drawing board for population size of ", board.arrangement)
         for col in board.arrangement:
             for i in range(0, board.population_size):
                 if i == col:
@@ -171,5 +183,8 @@ class GeneticAlgorithm(object):
 
 
 if __name__ == '__main__':
-    ga = GeneticAlgorithm(4)
-    ga.generate(500, 0.001)
+    import sys
+    with open('results.txt', 'w') as f:
+        sys.stdout = f
+        ga = GeneticAlgorithm(50)
+        ga.generate(50, 0.001)
